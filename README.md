@@ -1,7 +1,7 @@
 
 ##  Pulse Code and Delta Modulation Systems
 
-This repository contains solutions and insights from **Lab-6: Pulse Code and Delta Modulation Systems** for the **EECS 4214: Digital Communications (Winter 2025)** course. The lab explores key concepts such as sampling, quantization, companding, and delta modulation.
+This repository contains solutions and insights from ** Pulse Code and Delta Modulation Systems** for the Digital Communications ** . This explores key concepts such as sampling, quantization, companding, and delta modulation.
 
 ---
 
