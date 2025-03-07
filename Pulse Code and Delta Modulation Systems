@@ -1,0 +1,283 @@
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.fft import fft, fftfreq
+
+#  Sampling and Spectrum Analysis
+
+fs_10kHz = 10000  #  10 kHz
+fs_11kHz = 11000  #  11 kHz
+t = np.arange(0, 0.01, 1/fs_10kHz)  # Time vector for 10 kHz
+
+# Signal definition
+# Signal: s(t) = sin(400πt) + 0.5cos(12000πt)
+def signal(t):
+    return np.sin(400 * np.pi * t) + 0.5 * np.cos(12000 * np.pi * t)
+
+s_10kHz = signal(t)
+
+plt.figure()
+plt.plot(t, s_10kHz)
+plt.title('Problem 1: Time-Domain Plot of Original Signal')
+plt.xlabel('Time (s)')
+plt.ylabel('Amplitude')
+plt.grid()
+plt.show()
+
+def plot_spectrum(signal, fs, title):
+    N = len(signal)
+    yf = fft(signal)
+    xf = fftfreq(N, 1/fs)
+    plt.figure()
+    plt.plot(xf[:N//2], np.abs(yf[:N//2]))
+    plt.title(title)
+    plt.xlabel('Frequency (Hz)')
+    plt.ylabel('Magnitude')
+    plt.grid()
+    plt.show()
+
+# 10 kHz
+plot_spectrum(s_10kHz, fs_10kHz, 'Problem 1: Spectrum of Sampled Signal at 10 kHz')
+
+# 11 kHz
+t_11kHz = np.arange(0, 0.01, 1/fs_11kHz)
+s_11kHz = signal(t_11kHz)
+
+# 11 kHz
+plot_spectrum(s_11kHz, fs_11kHz, 'Problem 1: Spectrum of Sampled Signal at 11 kHz')
+
+#  µ-law Compander and Quantization
+
+fs_20Hz = 20  # 20 Hz
+t2 = np.arange(0, 20, 1/fs_20Hz)
+
+# Signal definition for Problem 2
+# Signal: s(t) = 10exp(-t) + sin(2πt)
+def signal2(t):
+    return 10 * np.exp(-t) + np.sin(2 * np.pi * t)
+
+s2 = signal2(t2)
+
+def uniform_quantize(signal, bits):
+    levels = 2**bits
+    min_val, max_val = np.min(signal), np.max(signal)
+    q_signal = np.round((signal - min_val) / (max_val - min_val) * (levels - 1))
+    q_signal = q_signal / (levels - 1) * (max_val - min_val) + min_val
+    return q_signal
+
+# RMSE calculation
+def rmse(original, quantized):
+    return np.sqrt(np.mean((original - quantized)**2))
+
+# (a) 8-bit quantization without companding
+q_8bit = uniform_quantize(s2, 8)
+rmse_8bit = rmse(s2, q_8bit)
+
+plt.figure()
+plt.plot(t2, s2, label='Original Signal')
+plt.plot(t2, q_8bit, label='8-bit Quantized Signal', linestyle='--')
+plt.title('Problem 2(a): Original vs 8-bit Quantized Signal (No Companding)')
+plt.xlabel('Time (s)')
+plt.ylabel('Amplitude')
+plt.legend()
+plt.grid()
+plt.show()
+
+print(f'RMSE for 8-bit quantization without companding: {rmse_8bit}')
+
+# quantization for 3 and 4 bits
+q_3bit = uniform_quantize(s2, 3)
+q_4bit = uniform_quantize(s2, 4)
+rmse_3bit = rmse(s2, q_3bit)
+rmse_4bit = rmse(s2, q_4bit)
+
+# 3-bit Quantized Signal
+plt.figure()
+plt.plot(t2, s2, label='Original Signal')
+plt.plot(t2, q_3bit, label='3-bit Quantized Signal', linestyle='--')
+plt.title('Problem 2(a): Original vs 3-bit Quantized Signal (No Companding)')
+plt.xlabel('Time (s)')
+plt.ylabel('Amplitude')
+plt.legend()
+plt.grid()
+plt.show()
+
+# 4-bit Quantized Signal
+plt.figure()
+plt.plot(t2, s2, label='Original Signal')
+plt.plot(t2, q_4bit, label='4-bit Quantized Signal', linestyle='--')
+plt.title('Problem 2(a): Original vs 4-bit Quantized Signal (No Companding)')
+plt.xlabel('Time (s)')
+plt.ylabel('Amplitude')
+plt.legend()
+plt.grid()
+plt.show()
+
+print(f'RMSE for 3-bit quantization: {rmse_3bit}')
+print(f'RMSE for 4-bit quantization: {rmse_4bit}')
+
+# (b) µ-law companding with µ = 255
+def mu_law_compand(signal, mu=255):
+    return np.sign(signal) * np.log1p(mu * np.abs(signal)) / np.log1p(mu)
+
+def mu_law_expand(signal, mu=255):
+    return np.sign(signal) * (1/mu) * (np.expm1(np.abs(signal) * np.log1p(mu)))
+
+
+companded = mu_law_compand(s2)
+q_companded = uniform_quantize(companded, 8)
+expanded = mu_law_expand(q_companded)
+rmse_companded = rmse(s2, expanded)
+
+# Companded-Quantized-Expanded Signal
+plt.figure()
+plt.plot(t2, s2, label='Original Signal')
+plt.plot(t2, expanded, label='Companded-Quantized-Expanded Signal', linestyle='--')
+plt.title('Problem 2(b): Original vs 8-bit Quantized Signal with µ-law Companding')
+plt.xlabel('Time (s)')
+plt.ylabel('Amplitude')
+plt.legend()
+plt.grid()
+plt.show()
+
+print(f'RMSE for 8-bit quantization with µ-law companding: {rmse_companded}')
+
+# Spectrum of Quantized and Unquantized Signals
+fs_20Hz = 20
+observation_time = 20
+t3 = np.arange(0, observation_time, 1/fs_20Hz)
+
+def signal3(t):
+    return np.sin(2 * np.pi * t) + 0.5 * np.cos(np.pi * t / 2)
+
+s3 = signal3(t3)
+
+# Plot Spectrum of Unquantized Signal
+plot_spectrum(s3, fs_20Hz, 'Problem 3: Spectrum of Unquantized Signal')
+
+# 8-bit, 6-bit, and 4-bit
+for bits in [8, 6, 4]:
+    q_signal = uniform_quantize(s3, bits)
+    plot_spectrum(q_signal, fs_20Hz, f'Problem 3: Spectrum of {bits}-bit Quantized Signal')
+
+
+#   Delta Modulation
+# Generate the original signal from Problem 3
+def generate_signal(Fs, T):
+    t = np.arange(0, T, 1/Fs)
+    f = 2  # Frequency in Hz
+    signal = np.sin(2 * np.pi * f * t)
+    return t, signal
+
+# Delta Modulation
+def delta_modulation(signal, step_size):
+    dm_signal = np.zeros_like(signal)
+    dm_bits = np.zeros_like(signal, dtype=int)
+    x_prev = 0
+
+    for i in range(len(signal)):
+        if signal[i] >= x_prev:
+            dm_bits[i] = 1
+            x_prev += step_size
+        else:
+            dm_bits[i] = 0
+            x_prev -= step_size
+
+        dm_signal[i] = x_prev
+
+    return dm_bits, dm_signal
+
+# RMS error calculation
+def rms_error(original, reconstructed):
+    return np.sqrt(np.mean((original - reconstructed) ** 2))
+
+# Main execution
+Fs = 80  # Sampling frequency 4 times 20Hz
+T = 20  # 20 sec observation window
+t, original_signal = generate_signal(Fs, T)
+
+# Define multiple step sizes to test
+step_sizes = [0.05, 0.1, 0.15, 0.2, 0.25]
+
+# Store RMS errors for comparison
+rms_errors = {}
+
+for step in step_sizes:
+    _, reconstructed_signal = delta_modulation(original_signal, step)
+    rms_errors[step] = rms_error(original_signal, reconstructed_signal)
+
+    plt.figure(figsize=(10, 4))
+    plt.plot(t, original_signal, label='Original Signal')
+    plt.plot(t, reconstructed_signal, label=f'Reconstructed (Step: {step})', linestyle='dashed')
+    plt.legend()
+    plt.title(f'Delta Modulation Reconstruction (Step Size: {step})')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Amplitude')
+    plt.grid()
+    plt.show()
+
+# Find the step size with the lowest RMS error
+optimal_step = min(rms_errors, key=rms_errors.get)
+
+# Plot all reconstructed signals on one graph for comparison
+plt.figure(figsize=(10, 5))
+plt.plot(t, original_signal, label='Original Signal', linewidth=1)
+for step in step_sizes:
+    _, reconstructed_signal = delta_modulation(original_signal, step)
+    plt.plot(t, reconstructed_signal, linestyle='dashed', label=f'Step Size: {step}')
+
+plt.legend()
+plt.title('Comparison of Delta Modulation Reconstruction with Different Step Sizes')
+plt.xlabel('Time (s)')
+plt.ylabel('Amplitude')
+plt.grid()
+plt.show()
+
+_, best_reconstructed_signal = delta_modulation(original_signal, optimal_step)
+plt.figure(figsize=(10, 4))
+plt.plot(t, original_signal, label='Original Signal')
+plt.plot(t, best_reconstructed_signal, label=f'Optimal Step Size: {optimal_step:.3f}', linestyle='dashed', color='red')
+plt.legend()
+plt.title(f'Optimal Delta Modulation Reconstruction (Step Size: {optimal_step:.3f})')
+plt.xlabel('Time (s)')
+plt.ylabel('Amplitude')
+plt.grid()
+plt.show()
+
+# Print RMS errors for all step sizes
+print("\nRMS Errors for Different Step Sizes:")
+for step, error in rms_errors.items():
+    print(f"Step Size: {step:.3f}, RMS Error: {error:.5f}")
+
+print(f"\nOptimal Step Size: {optimal_step:.3f} (Min RMS Error: {rms_errors[optimal_step]:.5f})")
+
+
+def uniform_quantize(signal, bits):
+    levels = 2**bits
+    min_val, max_val = np.min(signal), np.max(signal)
+    q_signal = np.round((signal - min_val) / (max_val - min_val) * (levels - 1))
+    q_signal = q_signal / (levels - 1) * (max_val - min_val) + min_val
+    return q_signal
+
+# Fs = 20 Hz
+Fs_uniform = 20
+t_uniform, signal_uniform = generate_signal(Fs_uniform, T)
+
+# 8-bit uniform quantization
+q_uniform = uniform_quantize(signal_uniform, 8)
+
+rms_uniform = rms_error(signal_uniform, q_uniform)
+
+print(f"\nRMS Error with Delta Modulation (Fs = 80 Hz, Step = {optimal_step}): {rms_errors[optimal_step]:.5f}")
+print(f"RMS Error with 8-bit Uniform Quantization (Fs = 20 Hz): {rms_uniform:.5f}")
+
+plt.figure(figsize=(10, 5))
+plt.plot(t_uniform, signal_uniform, label='Original Signal')
+plt.plot(t_uniform, q_uniform, linestyle='dashed', label='8-bit Quantized Signal')
+plt.legend()
+plt.title('Uniform Quantization (8-bit) at Fs = 20 Hz')
+plt.xlabel('Time (s)')
+plt.ylabel('Amplitude')
+plt.grid()
+plt.show()
